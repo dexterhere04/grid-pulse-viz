@@ -24,23 +24,23 @@ const Navigation = () => {
               </NavLink>
             </Button>
             
-            <Button variant="ghost" size="sm" asChild>
+            {/* <Button variant="ghost" size="sm" asChild>
               <NavLink to="/panels" className={({ isActive }) => 
                 isActive ? "bg-primary/10 text-primary" : ""
               }>
                 <Settings className="h-4 w-4 mr-2" />
                 Panel Management
               </NavLink>
-            </Button>
+            </Button> */}
             
-            <Button variant="ghost" size="sm" asChild>
+            {/* <Button variant="ghost" size="sm" asChild>
               <NavLink to="/analytics" className={({ isActive }) => 
                 isActive ? "bg-primary/10 text-primary" : ""
               }>
                 <BarChart3 className="h-4 w-4 mr-2" />
                 Analytics
               </NavLink>
-            </Button>
+            </Button> */}
           </div>
         </div>
       </div>

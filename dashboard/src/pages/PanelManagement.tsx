@@ -31,6 +31,7 @@ import { useNavigate } from "react-router-dom";
 import solarPanelActive from "@/assets/solar-panel.jpg";
 import solarPanelMaintenance from "@/assets/solar-panel-maintenance.jpg";
 import solarPanelOffline from "@/assets/solar-panel-offline.jpg";
+import { format } from "path";
 
 interface Panel {
   id: string;
@@ -51,6 +52,7 @@ interface Panel {
   current: number;
   tilt: number;
   azimuth: number;
+  image: null;
 }
 
 const PanelManagement = () => {
@@ -59,6 +61,7 @@ const PanelManagement = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [selectedPanel, setSelectedPanel] = useState<Panel | null>(null);
+  const [preview, setPreview] = useState<string | null>(null);
   
   const [panels, setPanels] = useState<Panel[]>([
     {
@@ -79,7 +82,8 @@ const PanelManagement = () => {
       voltage: 38.4,
       current: 10.42,
       tilt: 30,
-      azimuth: 180
+      azimuth: 180,
+      image: null
     },
     {
       id: "2",
@@ -99,7 +103,8 @@ const PanelManagement = () => {
       voltage: 37.8,
       current: 10.18,
       tilt: 25,
-      azimuth: 180
+      azimuth: 180, 
+      image: null
     },
     {
       id: "3",
@@ -119,7 +124,8 @@ const PanelManagement = () => {
       voltage: 30.2,
       current: 8.92,
       tilt: 35,
-      azimuth: 90
+      azimuth: 90,
+      image: null
     },
     {
       id: "4",
@@ -139,7 +145,8 @@ const PanelManagement = () => {
       voltage: 0,
       current: 0,
       tilt: 20,
-      azimuth: 270
+      azimuth: 270,
+      image: null
     },
     {
       id: "5",
@@ -159,7 +166,8 @@ const PanelManagement = () => {
       voltage: 35.2,
       current: 9.85,
       tilt: 28,
-      azimuth: 180
+      azimuth: 180,
+      image : null
     }
   ]);
 
@@ -171,7 +179,8 @@ const PanelManagement = () => {
     manufacturer: "",
     model: "",
     tilt: "",
-    azimuth: ""
+    azimuth: "",
+    image: null as File | null
   });
 
   const filteredPanels = panels.filter(panel => {
@@ -210,11 +219,12 @@ const PanelManagement = () => {
       voltage: parseInt(formData.capacity) * 0.08,
       current: parseInt(formData.capacity) / 40,
       tilt: parseInt(formData.tilt) || 30,
-      azimuth: parseInt(formData.azimuth) || 180
+      azimuth: parseInt(formData.azimuth) || 180,
+      image: formData.image ? URL.createObjectURL(formData.image) : null
     };
 
     setPanels([...panels, newPanel]);
-    setFormData({ name: "", capacity: "", location: "", status: "active", manufacturer: "", model: "", tilt: "", azimuth: "" });
+    setFormData({ name: "", capacity: "", location: "", status: "active", manufacturer: "", model: "", tilt: "", azimuth: "" , image: null});
     
     toast({
       title: "Success",
@@ -269,7 +279,7 @@ const PanelManagement = () => {
         <div className="space-y-6">
           <div className="relative">
             <img 
-              src={getPanelImage(panel.status)} 
+              src={panel.image || getPanelImage(panel.status)} 
               alt={panel.name}
               className="w-full h-48 object-cover rounded-lg shadow-md"
             />
@@ -531,6 +541,33 @@ const PanelManagement = () => {
                 </SelectContent>
               </Select>
             </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="panelImage">Panel Image *</Label>
+              <Input
+                id="panelImage"
+                type="file"
+                accept="image/*"              // limits selection to image types
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) {
+                    // store the File object in state
+                    setFormData({ ...formData, image: file });
+
+                    // (optional) create a preview
+                    const previewUrl = URL.createObjectURL(file);
+                    setPreview(previewUrl);
+                  }
+                }}
+              />
+            </div>
+            {preview && (
+              <img
+                src={preview}
+                alt="Preview"
+                className="mt-2 h-32 object-cover rounded"
+              />
+            )}
             
             <div className="md:col-span-2 lg:col-span-4">
               <Button type="submit" className="w-full md:w-auto">
@@ -551,7 +588,7 @@ const PanelManagement = () => {
                 {/* Solar Panel Visual */}
                 <div className="relative h-48 overflow-hidden">
                   <img 
-                    src={getPanelImage(panel.status)} 
+                    src={panel.image || getPanelImage(panel.status)} 
                     alt={panel.name}
                     className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
                   />

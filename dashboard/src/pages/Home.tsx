@@ -1,10 +1,46 @@
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { ArrowRight, Zap, BarChart3, Shield, Leaf } from "lucide-react";
 import { Link } from "react-router-dom";
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
+import { useToast } from "@/hooks/use-toast";
 import heroImage from "@/assets/hero-solar-grid.jpg";
 
 const Home = () => {
+  const { toast } = useToast();
+  const [formData, setFormData] = useState({
+      userName: "",
+      password: ""
+  });
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!formData.userName || !formData.password) {
+      toast({
+        title: "Error",
+        description: "Please fill in all required fields.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    if(formData.password === "admin123" && formData.userName === "admin") {
+      window.location.href = "/panels"; // Redirect to /panels on successful login
+    } else {
+      toast({
+        title: "Error",
+        description: "Invalid username or password.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setFormData({ userName: "", password: ""});
+    
+  };
+
   const features = [
     {
       icon: Zap,
@@ -31,32 +67,50 @@ const Home = () => {
   return (
     <div className="min-h-screen">
       {/* Hero Section */}
-      <section className="relative overflow-hidden bg-gradient-to-br from-primary/5 via-background to-accent/5">
+      <section className="relative overflow-hidden bg-gradient-to-br from-primary/5 via-background to-accent">
         <div className="container mx-auto px-4 py-24">
           <div className="grid lg:grid-cols-2 gap-12 items-center">
             <div className="space-y-8">
               <div className="space-y-4">
                 <h1 className="text-5xl lg:text-6xl font-bold text-foreground leading-tight">
-                  Smart Grid
-                  <span className="bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
-                    {" "}Solar Management
-                  </span>
+                  Admin Login
                 </h1>
-                <p className="text-xl text-muted-foreground max-w-xl">
+                <form onSubmit={handleSubmit} className="grid grid-cols-1">
+                  <div className="space-y-2">
+                    <Label htmlFor="userName">Username</Label>
+                    <Input
+                      id="name"
+                      value={formData.userName}
+                      onChange={(e) => setFormData({ ...formData, userName: e.target.value })}
+                      placeholder="Enter Username"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="password">Password</Label>
+                    <Input
+                      id="name"
+                      value={formData.password}
+                      onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                      placeholder="Enter Password"
+                    />
+                  </div>
+                </form>
+                {/* <p className="text-xl text-muted-foreground max-w-xl">
                   Monitor, analyze, and optimize your solar energy system with our intelligent management platform. Real-time insights for maximum efficiency.
-                </p>
+                </p> */}
+
               </div>
               
               <div className="flex flex-col sm:flex-row gap-4">
-                <Button size="lg" asChild className="group">
+                <Button onClick={handleSubmit} size="lg" asChild className="group">
                   <Link to="/panels">
-                    Get Started
+                    Login
                     <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform" />
                   </Link>
                 </Button>
-                <Button variant="outline" size="lg" asChild>
+                {/* <Button variant="outline" size="lg" asChild>
                   <Link to="/analytics">View Analytics</Link>
-                </Button>
+                </Button> */}
               </div>
             </div>
             
@@ -73,7 +127,7 @@ const Home = () => {
       </section>
 
       {/* Features Section */}
-      <section className="py-24 bg-muted/30">
+      {/* <section className="py-24 bg-muted/30">
         <div className="container mx-auto px-4">
           <div className="text-center space-y-4 mb-16">
             <h2 className="text-4xl font-bold text-foreground">
@@ -98,10 +152,10 @@ const Home = () => {
             ))}
           </div>
         </div>
-      </section>
+      </section> */}
 
       {/* CTA Section */}
-      <section className="py-24 bg-gradient-to-r from-primary to-accent">
+      {/* <section className="py-24 bg-gradient-to-r from-primary to-accent">
         <div className="container mx-auto px-4 text-center">
           <div className="space-y-6">
             <h2 className="text-4xl font-bold text-white">
@@ -115,7 +169,7 @@ const Home = () => {
             </Button>
           </div>
         </div>
-      </section>
+      </section> */}
     </div>
   );
 };
