@@ -1,41 +1,84 @@
+# app/routes/devices.py
 from flask import Blueprint, request, jsonify
-from app.models import db, Device
-import secrets
-import base64
+from app.models import Device, db
+from datetime import datetime, timezone
 
 devices_bp = Blueprint("devices", __name__)
 
-def generate_api_key():
-    """
-    Generate a 256-bit (32-byte) random API key, encoded in URL-safe base64.
-    """
-    key = secrets.token_bytes(32)
-    return base64.urlsafe_b64encode(key).decode('utf-8')
+# --- Get all devices ---
+@devices_bp.route("/", methods=["GET"])
+def get_devices():
+    devices = Device.query.all()
+    data = [
+        {
+            "id": d.id,
+            "device_id": d.device_id,
+            "name": d.name,
+            "status": d.status,
+            "created_at": d.created_at.isoformat(),
+        } for d in devices
+    ]
+    return jsonify(data), 200
 
+# --- Get a single device ---
+@devices_bp.route("/<device_id>", methods=["GET"])
+def get_device(device_id):
+    device = Device.query.filter_by(device_id=device_id).first()
+    if not device:
+        return jsonify({"error": "Device not found"}), 404
+    data = {
+        "id": device.id,
+        "device_id": device.device_id,
+        "name": device.name,
+        "status": device.status,
+        "created_at": device.created_at.isoformat(),
+    }
+    return jsonify(data), 200
+
+# --- Add a new device ---
 @devices_bp.route("/", methods=["POST"])
 def add_device():
     data = request.get_json()
-    device_id = data.get("device_id")
-    name = data.get("name", "Unnamed Device")
-    
-    if not device_id:
-        return jsonify({"error": "device_id is required"}), 400
+    if not data or "device_id" not in data or "name" not in data:
+        return jsonify({"error": "device_id and name required"}), 400
 
-    if Device.query.filter_by(device_id=device_id).first():
+    existing = Device.query.filter_by(device_id=data["device_id"]).first()
+    if existing:
         return jsonify({"error": "Device already exists"}), 400
-    
-    # Generate unique API key for this device
-    api_key = generate_api_key()
-    
-    device = Device(device_id=device_id, name=name, api_key=api_key)
+
+    device = Device(
+        device_id=data["device_id"],
+        name=data["name"],
+        status=data.get("status", "offline"),
+        created_at=datetime.now(timezone.utc)
+    )
     db.session.add(device)
     db.session.commit()
-    
-    
-    # Return API key to client securely
-    return jsonify({
-        "status": "device added",
-        "device_id": device_id,
-        "name": device.name,
-        "api_key": api_key
-    }), 201
+    return jsonify({"message": "Device added successfully"}), 201
+
+# --- Update a device ---
+@devices_bp.route("/<device_id>", methods=["PUT"])
+def update_device(device_id):
+    device = Device.query.filter_by(device_id=device_id).first()
+    if not device:
+        return jsonify({"error": "Device not found"}), 404
+
+    data = request.get_json()
+    if "name" in data:
+        device.name = data["name"]
+    if "status" in data:
+        device.status = data["status"]
+
+    db.session.commit()
+    return jsonify({"message": "Device updated successfully"}), 200
+
+# --- Delete a device ---
+@devices_bp.route("/<device_id>", methods=["DELETE"])
+def delete_device(device_id):
+    device = Device.query.filter_by(device_id=device_id).first()
+    if not device:
+        return jsonify({"error": "Device not found"}), 404
+
+    db.session.delete(device)
+    db.session.commit()
+    return jsonify({"message": "Device deleted successfully"}), 200

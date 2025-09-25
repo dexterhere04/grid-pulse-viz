@@ -1,48 +1,57 @@
 # app/routes/events.py
-
 from flask import Blueprint, request, jsonify, current_app
-from app.models import Device
-from cryptography.hazmat.primitives.ciphers.aead import AESGCM
-import base64, json
+from app.models import Device,SensorEventSchema, db
 from datetime import datetime, timezone
+from pydantic import ValidationError
 
 events_bp = Blueprint("events", __name__)
 
 @events_bp.route("/", methods=["POST"])
 def receive_event():
     """
-    Receive encrypted event payloads from agents.
+    Receive sensor event payloads from devices.
     Headers:
         X-Device-ID : ID of the device
     Body:
-        raw encrypted payload (AES-GCM, base64)
+        JSON payload containing sensor data
+        {
+            "obiscode": "...",
+            "metric": "...",
+            "value": ...
+        }
     """
-    # 1. Get encrypted payload
-    payload = request.get_data(as_text=True)
+    try:
+        # 1️⃣ Get JSON payload
+        payload = request.get_json()
+        if not payload:
+            return jsonify({"error": "Invalid JSON payload"}), 400
 
-    # 2. Get device ID from header
-    device_id = request.headers.get("X-Device-ID")
-    if not device_id:
-        return jsonify({"error": "Missing X-Device-ID header"}), 400
+        # 2️⃣ Get device ID from header
+        device_id = request.headers.get("X-Device-ID")
+        if not device_id:
+            return jsonify({"error": "Missing X-Device-ID header"}), 400
 
-    # 3. Validate device in Postgres
-    device = Device.query.filter_by(device_id=device_id).first()
-    if not device:
-        return jsonify({"error": "Unknown device"}), 400
-    
-    # 5. Ensure device_id and timestamp are set
-    payload["device_id"] = device_id
-    payload["device_name"]= device.name
-    payload["timestamp"] = datetime.now(timezone.utc)
+        # 3️⃣ Validate device in Postgres
+        device = Device.query.filter_by(device_id=device_id).first()
+        if not device:
+            return jsonify({"error": "Unknown device"}), 400
 
-    # 6. Index to Elasticsearch
-    es = current_app.elasticsearch
-    event_type = payload.get("event_type")
-    if event_type == "network":
-        es.index(index="network-events", document=payload)
-    elif event_type == "file":
-        es.index(index="file-events", document=payload)
-    else:
-        return jsonify({"error": "Invalid event_type"}), 400
+        # 4️⃣ Add sensor & timestamp
+        payload["sensor"] = device.name
+        payload["timestamp"] = datetime.now(timezone.utc)
 
-    return jsonify({"status": "success"}), 201
+        # 5️⃣ Validate payload using Pydantic
+        try:
+            event = SensorEventSchema(**payload)
+        except ValidationError as e:
+            return jsonify({"error": "Invalid payload structure", "details": e.errors()}), 400
+
+        # 7️⃣ Index into Elasticsearch
+        es = current_app.elasticsearch
+        index_name = f"{event.metric}-events"  # Example: "lux-events", "temperature-events"
+        es.index(index=index_name, document=event.dict())
+
+        return jsonify({"status": "success"}), 201
+
+    except Exception as e:
+        return jsonify({"error": "Internal server error", "details": str(e)}), 500
