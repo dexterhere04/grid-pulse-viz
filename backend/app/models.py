@@ -9,8 +9,13 @@ class Device(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     device_id = db.Column(db.String(50), unique=True, nullable=False, index=True)
     name = db.Column(db.String(100))
+    capacity = db.Column(db.Integer,nullable=False)
+    location = db.Column(db.String(100))
+    manufacturer = db.Column(db.String(100))
+    model = db.Column(db.String(100))
+    tilt = db.Column(db.Integer,nullable=False)
+    azimuth = db.Column(db.Integer,nullable=False)
     status = db.Column(db.String(20), default="offline")
-    api_key = db.Column(db.String(100), unique=True, nullable=False)  # for auth
     created_at = db.Column(db.DateTime, default=datetime.now(timezone.utc))
 class SensorEventSchema(BaseModel):
     """

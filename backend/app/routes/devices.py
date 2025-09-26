@@ -14,9 +14,16 @@ def get_devices():
             "id": d.id,
             "device_id": d.device_id,
             "name": d.name,
+            "capacity": d.capacity,
+            "location": d.location,
+            "manufacturer": d.manufacturer,
+            "model": d.model,
+            "tilt": d.tilt,
+            "azimuth": d.azimuth,
             "status": d.status,
             "created_at": d.created_at.isoformat(),
-        } for d in devices
+        }
+        for d in devices
     ]
     return jsonify(data), 200
 
@@ -30,6 +37,12 @@ def get_device(device_id):
         "id": device.id,
         "device_id": device.device_id,
         "name": device.name,
+        "capacity": device.capacity,
+        "location": device.location,
+        "manufacturer": device.manufacturer,
+        "model": device.model,
+        "tilt": device.tilt,
+        "azimuth": device.azimuth,
         "status": device.status,
         "created_at": device.created_at.isoformat(),
     }
@@ -39,22 +52,40 @@ def get_device(device_id):
 @devices_bp.route("/", methods=["POST"])
 def add_device():
     data = request.get_json()
-    if not data or "device_id" not in data or "name" not in data:
-        return jsonify({"error": "device_id and name required"}), 400
+    required_fields = ["device_id", "name", "capacity", "tilt", "azimuth"]
+    if not data or not all(field in data for field in required_fields):
+        return jsonify({"error": f"Missing required fields: {', '.join(required_fields)}"}), 400
 
-    existing = Device.query.filter_by(device_id=data["device_id"]).first()
-    if existing:
+    if Device.query.filter_by(device_id=data["device_id"]).first():
         return jsonify({"error": "Device already exists"}), 400
 
     device = Device(
         device_id=data["device_id"],
         name=data["name"],
+        capacity=data["capacity"],
+        location=data.get("location", ""),
+        manufacturer=data.get("manufacturer", ""),
+        model=data.get("model", ""),
+        tilt=data["tilt"],
+        azimuth=data["azimuth"],
         status=data.get("status", "offline"),
-        created_at=datetime.now(timezone.utc)
+        created_at=datetime.now(timezone.utc),
     )
     db.session.add(device)
     db.session.commit()
-    return jsonify({"message": "Device added successfully"}), 201
+
+    return jsonify({"message": "Device added successfully", "device": {
+        "device_id": device.device_id,
+        "name": device.name,
+        "capacity": device.capacity,
+        "location": device.location,
+        "manufacturer": device.manufacturer,
+        "model": device.model,
+        "tilt": device.tilt,
+        "azimuth": device.azimuth,
+        "status": device.status,
+        "created_at": device.created_at.isoformat(),
+    }}), 201
 
 # --- Update a device ---
 @devices_bp.route("/<device_id>", methods=["PUT"])
@@ -64,10 +95,10 @@ def update_device(device_id):
         return jsonify({"error": "Device not found"}), 404
 
     data = request.get_json()
-    if "name" in data:
-        device.name = data["name"]
-    if "status" in data:
-        device.status = data["status"]
+    updatable_fields = ["name", "status", "capacity", "location", "manufacturer", "model", "tilt", "azimuth"]
+    for field in updatable_fields:
+        if field in data:
+            setattr(device, field, data[field])
 
     db.session.commit()
     return jsonify({"message": "Device updated successfully"}), 200

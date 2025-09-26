@@ -1,0 +1,158 @@
+import { useState, useEffect } from "react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { useToast } from "@/hooks/use-toast";
+import { Plus, Trash2 } from "lucide-react";
+import axios from "axios";
+
+interface Device {
+  device_id: string;
+  name: string;
+  status: "online" | "offline" | "maintenance";
+  created_at: string;
+}
+
+const DeviceManagement = () => {
+  const { toast } = useToast();
+  const [devices, setDevices] = useState<Device[]>([]);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [formData, setFormData] = useState({
+    name: "",
+    device_id: "",
+    status: "online" as Device["status"],
+  });
+
+  const fetchDevices = async () => {
+    setLoading(true);
+    try {
+      const res = await axios.get("/devices");
+      // Ensure we always set an array
+      const data = Array.isArray(res.data) ? res.data : [];
+      setDevices(data);
+    } catch (err) {
+      toast({ title: "Error", description: "Failed to fetch devices.", variant: "destructive" });
+      setDevices([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchDevices();
+  }, []);
+
+  const handleAddDevice = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!formData.name || !formData.device_id) {
+      toast({ title: "Error", description: "Please fill in all required fields.", variant: "destructive" });
+      return;
+    }
+
+    try {
+      const res = await axios.post("/devices", formData);
+      setDevices((prev) => [...prev, res.data]);
+      setFormData({ name: "", device_id: "", status: "online" });
+      toast({ title: "Success", description: "Device added successfully!" });
+    } catch {
+      toast({ title: "Error", description: "Failed to add device.", variant: "destructive" });
+    }
+  };
+
+  const handleDeleteDevice = async (device_id: string) => {
+    try {
+      await axios.delete(`/devices/${device_id}`);
+      setDevices((prev) => prev.filter((d) => d.device_id !== device_id));
+      toast({ title: "Deleted", description: "Device removed successfully." });
+    } catch {
+      toast({ title: "Error", description: "Failed to delete device.", variant: "destructive" });
+    }
+  };
+
+  const filteredDevices = Array.isArray(devices)
+    ? devices.filter((d) => d.name.toLowerCase().includes(searchTerm.toLowerCase()) || d.device_id.toLowerCase().includes(searchTerm.toLowerCase()))
+    : [];
+
+  const getStatusColor = (status: Device["status"]) => {
+    switch (status) {
+      case "online": return "bg-success text-success-foreground";
+      case "offline": return "bg-destructive text-destructive-foreground";
+      case "maintenance": return "bg-warning text-warning-foreground";
+    }
+  };
+
+  if (loading) return <p className="text-center py-12">Loading devices...</p>;
+
+  return (
+    <div className="container mx-auto px-4 py-8 space-y-8">
+      <div className="flex justify-between items-center">
+        <h1 className="text-4xl font-bold text-foreground">Device Management</h1>
+      </div>
+
+      {/* Search */}
+      <Input
+        placeholder="Search devices by name or ID..."
+        value={searchTerm}
+        onChange={(e) => setSearchTerm(e.target.value)}
+        className="mb-4"
+      />
+
+      {/* Add Device Form */}
+      <Card className="mb-6">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Plus className="h-5 w-5" /> Add New Device
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={handleAddDevice} className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+              <Label htmlFor="name">Device Name *</Label>
+              <Input id="name" value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} />
+            </div>
+            <div>
+              <Label htmlFor="device_id">Device ID *</Label>
+              <Input id="device_id" value={formData.device_id} onChange={(e) => setFormData({ ...formData, device_id: e.target.value })} />
+            </div>
+            <div className="flex items-end">
+              <Button type="submit" className="w-full md:w-auto">
+                <Plus className="h-4 w-4 mr-2" /> Add Device
+              </Button>
+            </div>
+          </form>
+        </CardContent>
+      </Card>
+
+      {/* Devices Grid */}
+      {filteredDevices.length > 0 ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {filteredDevices.map((device) => (
+            <Card key={device.device_id} className="relative hover:shadow-lg transition-all duration-300">
+              <CardHeader>
+                <CardTitle>{device.name}</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                <div className={`inline-block px-2 py-1 rounded ${getStatusColor(device.status)}`}>{device.status}</div>
+                <div className="text-sm text-muted-foreground">ID: {device.device_id}</div>
+                <div className="text-sm text-muted-foreground">Created: {new Date(device.created_at).toLocaleString()}</div>
+                <div className="absolute top-2 right-2 flex gap-1">
+                  <Button size="sm" variant="destructive" onClick={() => handleDeleteDevice(device.device_id)}>
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      ) : (
+        <div className="text-center py-12 text-muted-foreground">
+          No devices found. Try adding a new device.
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default DeviceManagement;

@@ -37,7 +37,7 @@ services:
     ports:
       - "3000:8080"   # host:container
     environment:
-      - VITE_API_URL=http://localhost:5000  # React can call Flask here
+      - VITE_API_URL=http://flask-app:5000 # React can call Flask here
     stdin_open: true
     tty: true
 

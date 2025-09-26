@@ -4,9 +4,12 @@ from app.routes.events import events_bp
 from app.routes.devices import devices_bp
 from elasticsearch import Elasticsearch
 import os
+from flask_cors import CORS
 
 def create_app(config_path=None):
     app = Flask(__name__)
+    CORS(app, resources={r"/*": {"origins": "*"}})
+
     # -----------------------------
     app.config["SQLALCHEMY_DATABASE_URI"] = os.getenv(
         "DATABASE_URL",
